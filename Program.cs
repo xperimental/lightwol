@@ -18,11 +18,15 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace LightWol
 {
     class Program
     {
+        static int packetCount = 1;
+        static int packetInterval = 1;
+
         static void Main(string[] args)
         {
             byte[] targetMac;
@@ -30,7 +34,12 @@ namespace LightWol
             {
                 targetMac = ParseArgs(args);
             }
-            catch (ArgumentException)
+            catch (MacAddressException e)
+            {
+                Console.WriteLine("ERROR: " + e.Message);
+                return;
+            }
+            catch (UsageException)
             {
                 Usage();
                 return;
@@ -40,27 +49,45 @@ namespace LightWol
 
             IPEndPoint ep = new IPEndPoint(IPAddress.Broadcast, 7);
 
-            Console.WriteLine("Sending packet...");
-
             UdpClient client = new UdpClient();
-            client.Send(buffer, buffer.Length, ep);
+            while (packetCount > 0)
+            {
+                Console.WriteLine("Sending packet...");
+                client.Send(buffer, buffer.Length, ep);
+
+                if (packetCount > 1)
+                    Thread.Sleep(packetInterval * 1000);
+                packetCount--;
+            }
         }
 
         private static void Usage()
         {
             Console.WriteLine("LightWol - Wake-On-Lan command-line utility\n");
-            Console.WriteLine("usage:\n\tLightWol <mac-address>\n");
+            Console.WriteLine("usage:\n\tLightWol <mac-address> [<count> [<interval>]]\n");
+            Console.WriteLine(" mac-address MAC-Address of the host to wake up.");
+            Console.WriteLine(" count       Sets the number of packets that should be sent (default = 1).");
+            Console.WriteLine(" interval    Sets the interval between the packets in seconds (default = 1s).\n");
             Console.WriteLine("example:\n\tLightWol 00:11:22:33:44:55");
         }
 
         private static byte[] ParseArgs(string[] args)
         {
-            if (args.Length != 1)
-                throw new ArgumentException();
+            if (args.Length == 0 || args.Length > 3)
+                throw new UsageException("Invalid number of arguments!");
+
+            if (args.Length > 1)
+            {
+                packetCount = Int32.Parse(args[1]);
+                if (args.Length > 2)
+                {
+                    packetInterval = Int32.Parse(args[2]);
+                }
+            }
 
             string[] macParts = args[0].Split(':', '-');
             if (macParts.Length != 6)
-                throw new ArgumentException();
+                throw new MacAddressException(args[0]);
 
             byte[] mac = new byte[6];
             for (int i = 0; i < 6; i++)

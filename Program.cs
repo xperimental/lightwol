@@ -14,20 +14,36 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with LightWol.  If not, see <http://www.gnu.org/licenses/>.
  */
-using System;
-using System.Collections.Generic;
-using System.Net;
-using System.Net.Sockets;
-using System.Threading;
-
 namespace LightWol
 {
-    class Program
-    {
-        static int packetCount = 1;
-        static int packetInterval = 1;
+    using System;
+    using System.Collections.Generic;
+    using System.Net;
+    using System.Net.Sockets;
+    using System.Threading;
 
-        static void Main(string[] args)
+    /// <summary>
+    /// This is the main class of the LightWol application. It contains
+    /// the main method which is called on program start and all other program
+    /// logic.
+    /// </summary>
+    internal class Program
+    {
+        /// <summary>
+        /// Contains the number of packets to send.
+        /// </summary>
+        private static int packetCount = 1;
+
+        /// <summary>
+        /// Contains the time to wait between sending packets (seconds).
+        /// </summary>
+        private static int packetInterval = 1;
+
+        /// <summary>
+        /// Main method called on program start.
+        /// </summary>
+        /// <param name="args">Command line arguments passed to the application.</param>
+        public static void Main(string[] args)
         {
             byte[] targetMac;
             try
@@ -56,11 +72,17 @@ namespace LightWol
                 client.Send(buffer, buffer.Length, ep);
 
                 if (packetCount > 1)
+                {
                     Thread.Sleep(packetInterval * 1000);
+                }
+
                 packetCount--;
             }
         }
 
+        /// <summary>
+        /// Displays some usage information to the user.
+        /// </summary>
         private static void Usage()
         {
             Console.WriteLine("LightWol - Wake-On-Lan command-line utility\n");
@@ -71,10 +93,21 @@ namespace LightWol
             Console.WriteLine("example:\n\tLightWol 00:11:22:33:44:55");
         }
 
+        /// <summary>
+        /// Parses the command line arguments and sets the class variables
+        /// accordingly. Will throw exceptions, if the command line arguments
+        /// are not valid.
+        /// </summary>
+        /// <param name="args">Command line arguments passed to application.</param>
+        /// <returns>MAC address to wake up.</returns>
+        /// <exception cref="UsageException">If the number of arguments is not valid.</exception>
+        /// <exception cref="MacAddressException">If the MAC address is not valid.</exception>
         private static byte[] ParseArgs(string[] args)
         {
             if (args.Length == 0 || args.Length > 3)
+            {
                 throw new UsageException("Invalid number of arguments!");
+            }
 
             if (args.Length > 1)
             {
@@ -87,21 +120,33 @@ namespace LightWol
 
             string[] macParts = args[0].Split(':', '-');
             if (macParts.Length != 6)
+            {
                 throw new MacAddressException(args[0]);
+            }
 
             byte[] mac = new byte[6];
             for (int i = 0; i < 6; i++)
             {
                 mac[i] = Byte.Parse(macParts[i], System.Globalization.NumberStyles.HexNumber);
             }
+
             return mac;
         }
 
+        /// <summary>
+        /// Creates a byte array containing a "magic packet" to wake up a host via
+        /// wake-on-lan.
+        /// </summary>
+        /// <param name="targetMac">MAC address to wake up.</param>
+        /// <returns>Byte array containing "magic packet".</returns>
         private static byte[] CreateWolPacket(byte[] targetMac)
         {
             List<byte> result = new List<byte>();
             for (int i = 0; i < 6; i++)
+            {
                 result.Add(0xFF);
+            }
+
             for (int i = 0; i < 16; i++)
             {
                 for (int j = 0; j < targetMac.Length; j++)
@@ -109,6 +154,7 @@ namespace LightWol
                     result.Add(targetMac[j]);
                 }
             }
+
             return result.ToArray();
         }
     }
